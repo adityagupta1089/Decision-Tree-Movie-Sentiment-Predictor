@@ -1,0 +1,7 @@
+*.tar.gz
+data/*
+aclImdb/*
+bin/*
+.project
+.classpath
+.settings/*
