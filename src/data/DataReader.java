@@ -32,9 +32,11 @@ public class DataReader {
 	    }
 	}
 	/*
-	 * We need to take random subset, so suffling all reviews and taking the
-	 * required ones from the top seems reasonable
+	 * We need to take random subset, so shuffling all reviews and taking
+	 * the required ones from the top seems reasonable
 	 */
+	// TODO what does it mean by equal number of positive and negative
+	// instances?
 	Collections.shuffle(reviews);
 	List<Review> selected = new ArrayList<>();
 	for (int i = 0; i < reviewCount; i++) {

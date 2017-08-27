@@ -1,12 +1,17 @@
 package data;
 
 import java.util.HashMap;
+import java.util.Random;
 import java.util.Set;
 
 public class Review {
 
     private boolean label;
     private HashMap<Integer, Integer> entries;
+
+    // TODO Q.3 measure effect of noise
+    private static final double NOISE_THRESHOLD = 0.0 / 100.0;
+    private static final Random rand = new Random();
 
     public Review(String line) {
 	String[] words = line.split(" ");
@@ -16,6 +21,9 @@ public class Review {
 	    this.label = true;
 	} else if (rating <= 4) {
 	    this.label = false;
+	}
+	if (rand.nextDouble() < NOISE_THRESHOLD) {
+	    this.label = !this.label;
 	}
 	this.entries = new HashMap<>();
 	for (int i = 1; i < words.length; i++) {

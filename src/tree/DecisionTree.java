@@ -14,30 +14,36 @@ import tree.node.Node;
 
 public class DecisionTree {
 
+    private static final int TOTAL_REVIEWS = 1000;
     private Node root;
 
     public DecisionTree(List<Review> reviews, Set<Integer> attributes) {
 	this.root = iterativeDichotomiser3(reviews, attributes);
     }
 
+    // TODO Q.2 Statistics of the learned tree
+    // TODO Q.2 early stopping - number of nodes
+    // TODO Q.2 early stopping - prediction accuracy
+    // TODO Q.2 most used attributes
+    // TODO Q.4 Pruning, post-pruning
+    // TODO Q.4 Change in prediction accuracy as a function of pruning
     private Node iterativeDichotomiser3(List<Review> reviews, Set<Integer> attributes) {
-	assert (reviews.size() > 0);
-	boolean prevLabel = reviews.get(0).isPositiveLabel();
+	boolean firstLabel = reviews.get(0).isPositiveLabel();
 	boolean allSame = true;
 	for (int i = 1; i < reviews.size(); i++) {
-	    boolean nextLabel = reviews.get(i).isPositiveLabel();
-	    if (nextLabel != prevLabel) {
+	    boolean currLabel = reviews.get(i).isPositiveLabel();
+	    if (currLabel != firstLabel) {
 		allSame = false;
 		break;
 	    }
 	}
 	if (allSame) {
-	    return new LeafNode(prevLabel);
+	    return new LeafNode(firstLabel);
 	}
 	InternalNode root = new InternalNode();
 	/* Finding the best attribute */
 	int bestAttribute = -1;
-	double maxInformationGain = Double.NEGATIVE_INFINITY;
+	double maxInformationGain = 0;
 	for (int attribute : attributes) {
 	    double informationGain = getInformationGain(reviews, attribute);
 	    if (informationGain > maxInformationGain) {
@@ -45,7 +51,12 @@ public class DecisionTree {
 		maxInformationGain = informationGain;
 	    }
 	}
+	if (maxInformationGain == 0) {
+	    long positiveCount = reviews.stream().map(Review::isPositiveLabel).count();
+	    return new LeafNode(positiveCount > reviews.size() - positiveCount);
+	}
 	final Integer fBestAttribute = bestAttribute;
+	root.setWordID(bestAttribute);
 	attributes.remove(fBestAttribute);
 	Collections.sort(reviews,
 		(r1, r2) -> Integer.compare(r1.getValue(fBestAttribute), r2.getValue(fBestAttribute)));
@@ -55,24 +66,22 @@ public class DecisionTree {
 	    Review curr = reviews.get(i);
 	    int currVal = curr.getValue(fBestAttribute);
 	    boolean currLabel = curr.isPositiveLabel();
+	    currentClass.add(curr);
 	    if (i + 1 < reviews.size()) {
 		Review next = reviews.get(i + 1);
 		int nextVal = next.getValue(fBestAttribute);
 		boolean nextLabel = next.isPositiveLabel();
-		currentClass.add(curr);
 		if (nextVal != currVal || (nextVal != currVal && nextLabel != currLabel)) {
 		    Node childNode = iterativeDichotomiser3(currentClass, attributes);
-		    root.setWordID(bestAttribute);
 		    childNode.setMinVal(minVal);
-		    minVal = (currVal + nextVal) / 2.0;
-		    childNode.setMaxVal(minVal);
+		    double maxVal = (currVal + nextVal) / 2.0;
+		    childNode.setMaxVal(maxVal);
+		    minVal = maxVal;
 		    root.addChild(childNode);
 		    currentClass = new ArrayList<>();
 		}
 	    } else if (i == reviews.size() - 1) {
-		currentClass.add(curr);
 		Node childNode = iterativeDichotomiser3(currentClass, attributes);
-		childNode.setWordID(bestAttribute);
 		childNode.setMinVal(minVal);
 		childNode.setMaxVal(Double.POSITIVE_INFINITY);
 		root.addChild(childNode);
@@ -82,7 +91,6 @@ public class DecisionTree {
     }
 
     private double getInformationGain(List<Review> reviews, int attribute) {
-	assert (reviews.size() > 0);
 	Collections.sort(reviews, (r1, r2) -> Integer.compare(r1.getValue(attribute), r2.getValue(attribute)));
 	/*
 	 * If a particular value for an attribute is common for many reviews
@@ -125,10 +133,11 @@ public class DecisionTree {
 		informationGain -= entropy(positive, negative) * (positive + negative);
 		/* normalizing by size(reviews) & adding the positive term */
 		informationGain /= reviews.size();
+		totalPositive += positive;
+		totalNegative += negative;
 		informationGain += entropy(totalPositive, totalNegative);
 	    }
 	}
-	assert (informationGain != Double.NaN);
 	return informationGain;
     }
 
@@ -145,7 +154,7 @@ public class DecisionTree {
 
     @Override
     public String toString() {
-	return root.toString();
+	return root.toString("", true, true);
     }
 
     private void testReviews(List<Review> reviews) {
@@ -177,21 +186,26 @@ public class DecisionTree {
 	}
     }
 
+    // TODO Q.5 feature bagging
+    // TODO Q.5 effect of number of trees in te forest on prediction accuracy
     public static void main(String[] args) {
 	System.out.println("Processing Training Data");
-	List<Review> trainReviews = DataReader.obtainReviews("data/train/labeledBow.feat", 1000);
+	List<Review> trainReviews = DataReader.obtainReviews("data/train/labeledBow.feat", TOTAL_REVIEWS);
 	System.out.println("Processing Testing Data");
-	List<Review> testReviews = DataReader.obtainReviews("data/test/labeledBow.feat", 1000);
+	List<Review> testReviews = DataReader.obtainReviews("data/test/labeledBow.feat", TOTAL_REVIEWS);
 	System.out.println("Processing Training Attributes");
 	Set<Integer> trainAttributes = new HashSet<>();
 	trainReviews.stream().map(Review::getAttributes).forEach(trainAttributes::addAll);
 	System.out.println("Building Tree");
 	DecisionTree tree = new DecisionTree(trainReviews, trainAttributes);
+	/*
+	 * System.out.println("Tree"); System.out.println(tree.toString());
+	 */
 	System.out.print("Training Data: ");
 	tree.testReviews(trainReviews);
 	System.out.print("Testing Data: ");
 	tree.testReviews(testReviews);
-	System.out.println();
+
     }
 
 }

@@ -36,4 +36,8 @@ public class Node {
 	this.maxVal = Double.POSITIVE_INFINITY;
     }
 
+    public String toString(String prefix, boolean last, boolean root) {
+	return this.toString();
+    }
+
 }

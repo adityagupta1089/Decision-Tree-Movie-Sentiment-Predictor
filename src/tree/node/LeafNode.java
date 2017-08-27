@@ -14,8 +14,8 @@ public class LeafNode extends Node {
     }
 
     @Override
-    public String toString() {
-	return "(LeafNode: [" + minVal + ", " + maxVal + "], " + label + ")";
+    public String toString(String prefix, boolean last, boolean root) {
+	return prefix + (last ? "└──" : "├──") + "LeafNode: [" + minVal + ", " + maxVal + "], " + label;
     }
 
 }

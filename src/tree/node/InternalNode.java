@@ -21,8 +21,16 @@ public class InternalNode extends Node {
     }
 
     @Override
-    public String toString() {
-	return "(InternalNode: [" + minVal + ", " + maxVal + "], " + wordID + ", " + children + ")";
+    public String toString(String prefix, boolean last, boolean root) {
+	StringBuilder sb = new StringBuilder();
+	sb.append(prefix + (last ? "└──" : "├──") + "InternalNode: [" + minVal + ", " + maxVal + "], compare #" + wordID
+		+ "\n");
+	for (int i = 0; i < this.children.size(); i++) {
+	    boolean lastChild = i == this.children.size() - 1;
+	    sb.append(this.children.get(i).toString(prefix + (root ? "    " : "│    "), lastChild, false)
+		    + (lastChild ? "" : "\n"));
+	}
+	return sb.toString();
     }
 
 }
