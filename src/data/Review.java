@@ -9,11 +9,10 @@ public class Review {
     private boolean label;
     private HashMap<Integer, Integer> entries;
 
-    // TODO Q.3 measure effect of noise
-    private static final double NOISE_THRESHOLD = 0.0 / 100.0;
+    private static final double NOISE_THRESHOLD = 0.0;
     private static final Random rand = new Random();
 
-    public Review(String line) {
+    public Review(String line, boolean noise) {
 	String[] words = line.split(" ");
 	int rating = Integer.parseInt(words[0]);
 	assert (rating >= 7 || rating <= 4);
@@ -22,7 +21,7 @@ public class Review {
 	} else if (rating <= 4) {
 	    this.label = false;
 	}
-	if (rand.nextDouble() < NOISE_THRESHOLD) {
+	if (noise && rand.nextDouble() * 100 < NOISE_THRESHOLD) {
 	    this.label = !this.label;
 	}
 	this.entries = new HashMap<>();

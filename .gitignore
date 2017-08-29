@@ -6,3 +6,7 @@ bin/*
 .classpath
 .settings/*
 out/*
+doubts.*
+*.aux
+*.log
+*.gz

@@ -11,8 +11,10 @@ public class DataReader {
 
     /**
      * Reads given quantity of reviews from the given file.
+     * 
+     * @param noise
      */
-    public static List<Review> obtainReviews(String filename, int reviewCount) {
+    public static List<Review> obtainReviews(String filename, int reviewCount, boolean noise) {
 	BufferedReader br = null;
 	/* List of all reviews */
 	List<Review> reviews = new ArrayList<>();
@@ -20,7 +22,7 @@ public class DataReader {
 	    br = new BufferedReader(new FileReader(filename));
 	    String line;
 	    while ((line = br.readLine()) != null) {
-		reviews.add(new Review(line));
+		reviews.add(new Review(line, noise));
 	    }
 	} catch (Exception e) {
 	    e.printStackTrace();
@@ -33,14 +35,22 @@ public class DataReader {
 	}
 	/*
 	 * We need to take random subset, so shuffling all reviews and taking
-	 * the required ones from the top seems reasonable
+	 * the required ones from the top seems reasonable keeping the positive
+	 * and negative ones limited to reviewCount/2 each
 	 */
-	// TODO what does it mean by equal number of positive and negative
-	// instances?
+	int positiveCount = 0;
+	int negativeCount = 0;
 	Collections.shuffle(reviews);
 	List<Review> selected = new ArrayList<>();
 	for (int i = 0; i < reviewCount; i++) {
-	    selected.add(reviews.get(i));
+	    Review curr = reviews.get(i);
+	    if (curr.isPositiveLabel() && positiveCount < reviewCount / 2) {
+		positiveCount++;
+		selected.add(curr);
+	    } else if (!curr.isPositiveLabel() && negativeCount < reviewCount / 2) {
+		negativeCount++;
+		selected.add(curr);
+	    }
 	}
 	return selected;
     }
