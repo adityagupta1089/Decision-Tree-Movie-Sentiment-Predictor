@@ -18,7 +18,7 @@ import tree.node.Node;
 public class DecisionTree {
 
     private static final int TOTAL_REVIEWS = 1000;
-    private static final int MAX_HEIGHT = 10;
+    private static final int MAX_HEIGHT = Integer.MAX_VALUE;
 
     private static final String TRAINING_FILENAME = "data/train/labeledBow.feat";
 
@@ -229,7 +229,6 @@ public class DecisionTree {
 	    if (exptNo < 2 || exptNo > 5) {
 		System.err.println("Experiment Number should be 2-5, recieved " + exptNo);
 	    } else {
-
 		System.out.println("Processing Training Data");
 		boolean noise = exptNo == 3;
 		List<Review> trainReviews = DataReader.obtainReviews(TRAINING_FILENAME, TOTAL_REVIEWS, noise);
