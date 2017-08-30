@@ -1,5 +1,6 @@
 \documentclass{article}
 \usepackage{tikz}
+\usepackage{amsmath}
 \usetikzlibrary{datavisualization}
 \title{CSL 603 - Machine Learning\\Lab 1\\Decision Trees and Forests}
 \author{Aditya Gupta\\2015csb1003}
@@ -9,11 +10,13 @@
 A decision tree was learnt using 1000 reviews from the train set and tested on 1000 reviews from the test set. The learned tree showed the following statistics:
 \subsection{Effect of Early Stopping}
 The tree propagation was stopped when a critical height was reached and various properties of the tree such as total terminal nodes (leaf nodes) and the accuracy was noted. The following results were obtained:
+\begin{itemize} 
+\item Increase in Training Accuracy as maximum height increased as tree more and more fitted to the training data. The Testing accuracy initially increased but then became almost constant and then slightly decreased due to overfitting.
 
 \begin{tikzpicture}[scale=1.5]
 \datavisualization [scientific axes=clean,
 	x axis={grid, label={Maximum Height of the Tree}},
-	y axis={grid, label={Accuracy}, ticks ={tick unit=\%}, min value=0, max value=100},
+	y axis={grid, label={Accuracy}, ticks ={tick unit=\%}},
 	visualize as smooth line/.list={trainacc, testacc},
 	style sheet=vary hue,
 	style sheet=cross marks,
@@ -21,76 +24,74 @@ The tree propagation was stopped when a critical height was reached and various 
 	testacc={label in legend={text=Accuracy on Testing Data}}]
 data [set=trainacc] {
 	x, y
-	1, 58.534
-	2, 66.499
-	3, 63.645
-	4, 71.111
-	5, 72.032
-	6, 74.361
-	7, 76.0692
-	8, 79.405
-	9, 85.757
-	10, 83.819
-	20, 98.300
-	50, 100.0
-	100, 100.0
-	150, 100.0
-	200, 100.0
+	1, 58.148
+	2,65.593
+	3,69.818
+	4,70.523
+	5,72.233
+	6,75.251
+	7,76.257
+	8,79.476
+	9,82.494
+	10,85.513
+	20,96.277
+	50,100.000
 }
 data [set=testacc] {
 	x, y
-	1, 56.592
-	2, 64.012
-	3, 58.074
-	4, 64.878
-	5, 67.679
-	6, 62.449
-	7, 68.3049
-	8, 71.342
-	9, 63.242
-	10, 68.965
-	20, 65.102
-	50, 66.266
-	100, 65.789
-	150, 66.332
-	200, 61.226
+	1,56.142
+	2,65.888
+	3,66.395
+	4,66.598
+	5,67.309
+	6,66.802
+	7,66.903
+	8,64.974
+	9,67.411
+	10,64.771
+	20,65.076
+	50,63.959
 };
 \end{tikzpicture}
+
+\item The total number of leaf nodes increased slowly as height increased as more and more splits occured and thus resulting in more leaf nodes.
 
 \begin{tikzpicture}[scale=1.5]
 \datavisualization [scientific axes=clean,
 	visualize as smooth line/.list={leaf},
 	style sheet=vary hue,
 	style sheet=cross marks,
-	x axis={label={Maximum height of the Tree}},
-	y axis={label={Total Leaf Nodes}},
+	x axis={grid, label={Maximum height of the Tree}},
+	y axis={grid, label={Total Leaf Nodes}},
 	leaf={label in legend={text=Total Leaf Nodes}}]
 data [set=leaf]{
 x, y
-1, 2
-2, 4
-3, 8
-4, 12
-5, 13
-6,  31
-7, 30
-8, 31
-9, 35
-10, 56
-20, 106
-50, 123
-100, 121
-150, 123 
-200, 123
+1,2
+2,4
+3,7
+4,11
+5,15
+6, 23
+7, 31
+8, 39
+9, 50
+10, 60
+20, 105
+50, 127
 };
 \end{tikzpicture}
+
+\item Some of the commonly used words to decide were ``this'', ``where'', ``town'', ``moments'' and ``he''.
+
+\end{itemize}
+
 \section*{Noise (Experiment 3)}
 The Noise was changed and the following results were obtained:
 
 \begin{tikzpicture}[scale=1.5]
 \datavisualization [scientific axes=clean,
 	x axis={grid, label={Noise Threshold}, ticks={tick unit=\%}},
-	y axis={grid, label={Accuracy}, ticks ={tick unit=\%}, min value=0, max value=100},
+	y axis={grid, label={Accuracy}, ticks ={tick unit=\%}},
 	visualize as smooth line/.list={trainacc, testacc},
 	style sheet=vary hue,
 	style sheet=cross marks,
@@ -103,37 +104,57 @@ data [set=trainacc] {
 	1, 100.0
 	5, 100.0
 	10, 100.0
-	20, 100.0
-	30, 100.0
-	40, 100.0
-	50, 100.0
-	60, 100.0
-	70, 100.0
-	80, 100.0
-	90, 100.0
-	100, 100.0
 }
 data [set=testacc] {
 	x, y
-	0, 63.039
-	0.5, 64.604
-	1, 63.975
-	5, 65.111
-	10, 62.298
-	20, 59.1
-	30, 57.894
-	40, 51.398
-	50, 49.349
-	60, 46.928
-	70, 44.321
-	80, 39.796
-	90, 36.884
-	100, 34.036
+	0, 66.232
+	0.5, 66.332
+	1, 65.430
+	5, 66.533
+	10, 61.422
 };
 \end{tikzpicture}
 
 \section*{Pruning (Experiment 4)}
 Lorem Ipsum bla bla bla
+
 \section*{Decision Forests (Experiment 5)}
-Lorem Ipsum bla bla bla
+A decision forest was constructed using $5, 10, ... 50$ trees  with $\sqrt{N}$ where $N$ are the attributes occuring in the $1000$ trees and the following results were obtained:
+
+\begin{tikzpicture}[scale=1.5]
+\datavisualization [scientific axes=clean,
+	x axis={grid, label={Noise Threshold}, ticks={tick unit=\%}},
+	y axis={grid, label={Accuracy}, ticks ={tick unit=\%}},
+	visualize as smooth line/.list={trainacc, testacc},
+	style sheet=vary hue,
+	style sheet=cross marks,
+	trainacc={label in legend={text=Accuracy on Training Data}},
+	testacc={label in legend={text=Accuracy on Testing Data}}]
+data [set=trainacc] {
+	x, y
+	5, 76.68
+	10, 84.22
+	15, 89.14
+	20, 89.74
+	25, 93.76
+	30, 89.34
+	35, 91.75
+	40, 91.75
+	45, 93.96
+	50, 95.07
+}
+data [set=testacc] {
+	x, y
+	5, 53.59
+	10, 55.01
+	15, 59.37
+	20, 56.43
+	25, 59.27
+	30, 56.12
+	35, 58.35
+	40, 57.04
+	45, 59.37
+	50, 60.28
+};
+\end{tikzpicture}
 \end{document}

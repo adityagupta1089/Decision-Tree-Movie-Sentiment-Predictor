@@ -2,8 +2,16 @@ package tree.node;
 
 public class LeafNode extends Node {
 
-    private boolean label;
     private static int LEAF_NODE_COUNT = 0;
+    public static int getLeafNodeCount() {
+	return LEAF_NODE_COUNT;
+    }
+
+    public static void resetLeafNodeCount() {
+	LEAF_NODE_COUNT = 0;
+    }
+
+    private boolean label;
 
     public LeafNode(boolean label) {
 	super();
@@ -18,10 +26,6 @@ public class LeafNode extends Node {
     @Override
     public String toString(String prefix, boolean last, boolean root) {
 	return prefix + (last ? "└──" : "├──") + "LeafNode: [" + minVal + ", " + maxVal + "], " + label;
-    }
-
-    public static int getLeafNodeCount() {
-	return LEAF_NODE_COUNT;
     }
 
 }

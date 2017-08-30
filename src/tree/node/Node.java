@@ -7,33 +7,33 @@ public class Node {
 
     protected int wordID;
 
-    public double getMinVal() {
-	return minVal;
-    }
-
-    public void setMinVal(double minVal) {
-	this.minVal = minVal;
+    public Node() {
+	this.minVal = Double.NEGATIVE_INFINITY;
+	this.maxVal = Double.POSITIVE_INFINITY;
     }
 
     public double getMaxVal() {
 	return maxVal;
     }
 
-    public void setMaxVal(double maxVal) {
-	this.maxVal = maxVal;
+    public double getMinVal() {
+	return minVal;
     }
 
     public int getWordID() {
 	return wordID;
     }
 
-    public void setWordID(int wordID) {
-	this.wordID = wordID;
+    public void setMaxVal(double maxVal) {
+	this.maxVal = maxVal;
     }
 
-    public Node() {
-	this.minVal = Double.NEGATIVE_INFINITY;
-	this.maxVal = Double.POSITIVE_INFINITY;
+    public void setMinVal(double minVal) {
+	this.minVal = minVal;
+    }
+
+    public void setWordID(int wordID) {
+	this.wordID = wordID;
     }
 
     public String toString(String prefix, boolean last, boolean root) {

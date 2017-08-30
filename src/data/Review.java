@@ -1,18 +1,15 @@
 package data;
 
 import java.util.HashMap;
-import java.util.Random;
 import java.util.Set;
 
 public class Review {
 
+    private boolean originalLabel;
     private boolean label;
     private HashMap<Integer, Integer> entries;
 
-    private static final double NOISE_THRESHOLD = 0.0;
-    private static final Random rand = new Random();
-
-    public Review(String line, boolean noise) {
+    public Review(String line) {
 	String[] words = line.split(" ");
 	int rating = Integer.parseInt(words[0]);
 	assert (rating >= 7 || rating <= 4);
@@ -21,9 +18,7 @@ public class Review {
 	} else if (rating <= 4) {
 	    this.label = false;
 	}
-	if (noise && rand.nextDouble() * 100 < NOISE_THRESHOLD) {
-	    this.label = !this.label;
-	}
+	this.originalLabel = this.label;
 	this.entries = new HashMap<>();
 	for (int i = 1; i < words.length; i++) {
 	    String[] idcount = words[i].split(":");
@@ -33,16 +28,24 @@ public class Review {
 	}
     }
 
-    public boolean isPositiveLabel() {
-	return this.label;
-    }
-
     public Set<Integer> getAttributes() {
 	return this.entries.keySet();
     }
 
     public int getValue(int attribute) {
 	return this.entries.containsKey(attribute) ? this.entries.get(attribute) : 0;
+    }
+
+    public boolean isPositiveLabel() {
+	return this.label;
+    }
+
+    public void resetLabel() {
+	this.label = this.originalLabel;
+    }
+
+    public void switchLabel() {
+	this.label = !this.originalLabel;
     }
 
     @Override

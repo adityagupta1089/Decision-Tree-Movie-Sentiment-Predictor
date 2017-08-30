@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
 
 import data.DataReader;
@@ -18,29 +18,201 @@ import tree.node.Node;
 public class DecisionTree {
 
     private static final int TOTAL_REVIEWS = 1000;
-    private static final int MAX_HEIGHT = Integer.MAX_VALUE;
+
+    private static final int[] MAX_HEIGHTS = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 20, 50 };
+    private static int MAX_HEIGHT = Integer.MAX_VALUE;
+
+    private static final double[] NOISE_THRESHOLDS = new double[] { 0f, 0.5f, 1f, 5f, 10f };
+
+    private static final int MAX_ATTRIBUTES_PRINT = 10;
 
     private static final String TRAINING_FILENAME = "data/train/labeledBow.feat";
+
+    private static final int MAX_TREES_IN_FORESTS = 50;
+    private static final int FOREST_STEP_SIZE = 5;
+
+    private static int getCorrect(List<DecisionTree> forest, List<Review> reviews) {
+	int correct = 0;
+	for (Review r : reviews) {
+	    int positiveVote = 0;
+	    int negativeVote = 0;
+	    for (DecisionTree tree : forest) {
+		if (tree.getLabelUsingTree(r)) {
+		    positiveVote++;
+		} else {
+		    negativeVote++;
+		}
+	    }
+	    boolean majorityVote = positiveVote > negativeVote;
+	    if (majorityVote == r.isPositiveLabel()) {
+		correct++;
+	    }
+	}
+	return correct;
+    }
+
+    // TODO Q.4 Pruning, post-pruning
+    // TODO Q.4 Change in prediction accuracy as a function of pruning
+    // TODO Q.5 feature bagging
+    // TODO Q.5 effect of number of trees in the forest on prediction accuracy
+    /**
+     * arguments : filename experiment-number
+     */
+    public static void main(String[] args) {
+	if (args.length != 2) {
+	    System.err.println("Two arguments expected, recieved " + args.length);
+	} else {
+	    String testFileName = args[0];
+	    int exptNo = Integer.parseInt(args[1]);
+	    if (exptNo < 2 || exptNo > 5) {
+		System.err.println("Experiment Number should be 2-5, recieved " + exptNo);
+	    } else {
+		System.out.println("Processing Training Data");
+		List<Review> trainReviews = DataReader.obtainReviews(TRAINING_FILENAME, TOTAL_REVIEWS);
+
+		System.out.println("Processing Testing Data");
+		List<Review> testReviews = DataReader.obtainReviews(testFileName, TOTAL_REVIEWS);
+
+		System.out.println("Processing Training Attributes");
+		Set<Integer> trainAttributes = new HashSet<>();
+
+		trainReviews.stream().map(Review::getAttributes).forEach(trainAttributes::addAll);
+
+		switch (exptNo) {
+		/*
+		 * Decision Tree arguments: reviews attributes earlyStopping
+		 * attributePrinting
+		 */
+		case 2:
+		    for (int height : MAX_HEIGHTS) {
+			MAX_HEIGHT = height;
+			System.out.println("Current Maximum Height is " + height);
+			System.out.println("Building Tree");
+			DecisionTree tree = new DecisionTree(trainReviews, trainAttributes, true, true);
+
+			System.out.print("Training Data: ");
+			tree.testReviews(trainReviews);
+
+			System.out.print("Testing Data: ");
+			tree.testReviews(testReviews);
+		    }
+		    break;
+		case 3:
+		    Random rand = new Random();
+		    rand.setSeed(System.currentTimeMillis());
+		    for (double noiseThreshold : NOISE_THRESHOLDS) {
+			for (Review r : trainReviews) {
+			    r.resetLabel();
+			    if (rand.nextDouble() * 100 < noiseThreshold) {
+				r.switchLabel();
+			    }
+			}
+
+			System.out.println("Current Noise Threshold is " + noiseThreshold);
+			System.out.println("Building Tree");
+			DecisionTree tree = new DecisionTree(trainReviews, trainAttributes, false, false);
+
+			System.out.print("Training Data: ");
+			tree.testReviews(trainReviews);
+
+			System.out.print("Testing Data: ");
+			tree.testReviews(testReviews);
+		    }
+		    break;
+		case 4:
+		    // TODO pruning
+		    break;
+		case 5:
+		    List<DecisionTree> forest = new ArrayList<>();
+		    List<Integer> trainAttributesList = new ArrayList<>(trainAttributes);
+		    final int subsetAttributeSize = (int) Math.round(Math.sqrt(trainAttributesList.size()));
+		    System.out.println("+-----------+--------------------+--------------------+");
+		    System.out.printf("|%11s|%20s|%20s|\n", "Total Trees", "Training Accuracy", "Testing Accuracy");
+		    System.out.println("+-----------+--------------------+--------------------+");
+		    for (int i = 0; i < MAX_TREES_IN_FORESTS / FOREST_STEP_SIZE; i++) {
+			for (int k = 0; k < FOREST_STEP_SIZE; k++) {
+			    Collections.shuffle(trainAttributesList);
+			    Set<Integer> attributeSubset = new HashSet<>();
+			    for (int j = 0; j < subsetAttributeSize; j++) {
+				attributeSubset.add(trainAttributesList.get(j));
+			    }
+			    forest.add(new DecisionTree(trainReviews, attributeSubset, false, false));
+			}
+			int trainCorrect = getCorrect(forest, trainReviews);
+			int testCorrect = getCorrect(forest, testReviews);
+			double trainingAccuracy = 100.0 * trainCorrect / ((double) trainReviews.size());
+			double testingAccuracy = 100.0 * testCorrect / ((double) testReviews.size());
+			System.out.printf("|%11d|%20f|%20f|\n", forest.size(), trainingAccuracy, testingAccuracy);
+		    }
+		    System.out.println("+-----------+--------------------+--------------------+");
+		    break;
+		}
+	    }
+	}
+    }
 
     private Node root;
 
     public DecisionTree(List<Review> reviews, Set<Integer> attributes, boolean earlyStopping,
 	    boolean attributePrinting) {
 	Map<Integer, Integer> attributeCount = new HashMap<>();
+	LeafNode.resetLeafNodeCount();
 
 	this.root = iterativeDichotomiser3(reviews, attributes, earlyStopping, attributeCount, 0);
 
 	if (attributePrinting) {
-	    System.out.println("Attribute Counts");
-	    for (Entry<Integer, Integer> entry : attributeCount.entrySet()) {
-		System.out.printf("%6d %2d\n", entry.getKey(), entry.getValue());
-	    }
+	    System.out.println("Top " + MAX_ATTRIBUTES_PRINT + " Attribute Counts");
+	    System.out.println("+---------+-----+");
+	    System.out.printf("|%9s|%5s|\n", "Attribute", "Count");
+	    System.out.println("+---------+-----+");
+	    attributeCount.entrySet().stream().sorted((k1, k2) -> Integer.compare(k2.getValue(), k1.getValue()))
+		    .limit(MAX_ATTRIBUTES_PRINT).forEach(entry -> {
+			System.out.printf("|%9d|%5d|\n", entry.getKey(), entry.getValue());
+		    });
+	    System.out.println("+---------+-----+");
 	    System.out.println("Total Leaf Nodes (Terminal Nodes) are " + LeafNode.getLeafNodeCount());
+	}
+
+    }
+
+    private double entropy(int pos, int neg) {
+
+	double pp = pos / ((double) (pos + neg)); // p-plus
+	double pm = 1 - pp; // p-minus
+
+	double entropy = 0;
+
+	if (pp != 0)
+	    entropy -= pp * Math.log(pp) / Math.log(2);
+	if (pm != 0)
+	    entropy -= pm * Math.log(pm) / Math.log(2);
+	return entropy;
+    }
+
+    private boolean getLabelUsingTree(Review review) {
+	return getLabelUsingTree(review, root);
+    }
+
+    private boolean getLabelUsingTree(Review review, Node node) {
+	if (node instanceof InternalNode) {
+	    InternalNode inode = (InternalNode) node;
+	    int val = review.getValue(node.getWordID());
+	    /*
+	     * The ranges are sorted hence we can sweep from and left and
+	     * recurse on appropriate node
+	     */
+	    for (Node child : inode.getChildren()) {
+		if (child.getMinVal() <= val && val < child.getMaxVal()) {
+		    return getLabelUsingTree(review, child);
+		}
+	    }
+	    throw new RuntimeException("No Child Matched!");
+	} else {
+	    /* Reached a terminal node, return the label of this node */
+	    return ((LeafNode) node).getLabel();
 	}
     }
 
-    // TODO Q.4 Pruning, post-pruning
-    // TODO Q.4 Change in prediction accuracy as a function of pruning
     private Node iterativeDichotomiser3(List<Review> reviews, Set<Integer> attributes, boolean earlyStopping,
 	    Map<Integer, Integer> attributeCount, int height) {
 	/*
@@ -100,6 +272,7 @@ public class DecisionTree {
 		int currVal = reviews.get(i).getValue(attribute);
 		int nextVal = reviews.get(i + 1).getValue(attribute);
 
+		// X or (X and Y)
 		if (nextVal != currVal) {
 
 		    int remainingPositive = totalPositive - positive;
@@ -162,25 +335,6 @@ public class DecisionTree {
 	return root;
     }
 
-    private double entropy(int pos, int neg) {
-
-	double pp = pos / ((double) (pos + neg)); // p-plus
-	double pm = 1 - pp; // p-minus
-
-	double entropy = 0;
-
-	if (pp != 0)
-	    entropy -= pp * Math.log(pp) / Math.log(2);
-	if (pm != 0)
-	    entropy -= pm * Math.log(pm) / Math.log(2);
-	return entropy;
-    }
-
-    @Override
-    public String toString() {
-	return root.toString("", true, true);
-    }
-
     private void testReviews(List<Review> reviews) {
 	int correct = 0;
 	for (Review review : reviews) {
@@ -191,87 +345,9 @@ public class DecisionTree {
 	System.out.println("Accuracy is " + (100.0 * correct / ((double) reviews.size())) + "%");
     }
 
-    private boolean getLabelUsingTree(Review review) {
-	return getLabelUsingTree(review, root);
-    }
-
-    private boolean getLabelUsingTree(Review review, Node node) {
-	if (node instanceof InternalNode) {
-	    InternalNode inode = (InternalNode) node;
-	    int val = review.getValue(node.getWordID());
-	    /*
-	     * The ranges are sorted hence we can sweep from and left and
-	     * recurse on appropriate node
-	     */
-	    for (Node child : inode.getChildren()) {
-		if (child.getMinVal() <= val && val < child.getMaxVal()) {
-		    return getLabelUsingTree(review, child);
-		}
-	    }
-	    throw new RuntimeException("No Child Matched!");
-	} else {
-	    /* Reached a terminal node, return the label of this node */
-	    return ((LeafNode) node).getLabel();
-	}
-    }
-
-    // TODO Q.5 feature bagging
-    // TODO Q.5 effect of number of trees in the forest on prediction accuracy
-    /**
-     * arguments : filename experiment-number
-     */
-    public static void main(String[] args) {
-	if (args.length != 2) {
-	    System.err.println("Two arguments expected, recieved " + args.length);
-	} else {
-	    String testFileName = args[0];
-	    int exptNo = Integer.parseInt(args[1]);
-	    if (exptNo < 2 || exptNo > 5) {
-		System.err.println("Experiment Number should be 2-5, recieved " + exptNo);
-	    } else {
-		System.out.println("Processing Training Data");
-		boolean noise = exptNo == 3;
-		List<Review> trainReviews = DataReader.obtainReviews(TRAINING_FILENAME, TOTAL_REVIEWS, noise);
-
-		System.out.println("Processing Testing Data");
-		List<Review> testReviews = DataReader.obtainReviews(testFileName, TOTAL_REVIEWS, false);
-
-		System.out.println("Processing Training Attributes");
-		Set<Integer> trainAttributes = new HashSet<>();
-
-		trainReviews.stream().map(Review::getAttributes).forEach(trainAttributes::addAll);
-
-		System.out.println("Building Tree");
-		DecisionTree tree = null;
-		List<DecisionTree> forests = null;
-		switch (exptNo) {
-		/*
-		 * Decision Tree arguments: reviews attributes earlyStopping
-		 * attributePrinting
-		 */
-		case 2:
-		    tree = new DecisionTree(trainReviews, trainAttributes, true, true);
-		    break;
-		case 3:
-		case 4:
-		    tree = new DecisionTree(trainReviews, trainAttributes, false, false);
-		    break;
-		case 5:
-		    // TODO forests
-		    break;
-		}
-
-		if (exptNo == 4) {
-		    // TODO pruning
-		}
-
-		System.out.print("Training Data: ");
-		tree.testReviews(trainReviews);
-
-		System.out.print("Testing Data: ");
-		tree.testReviews(testReviews);
-	    }
-	}
+    @Override
+    public String toString() {
+	return root.toString("", true, true);
     }
 
 }

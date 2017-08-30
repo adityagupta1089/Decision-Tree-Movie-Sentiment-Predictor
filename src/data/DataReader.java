@@ -11,10 +11,8 @@ public class DataReader {
 
     /**
      * Reads given quantity of reviews from the given file.
-     * 
-     * @param noise
      */
-    public static List<Review> obtainReviews(String filename, int reviewCount, boolean noise) {
+    public static List<Review> obtainReviews(String filename, int reviewCount) {
 	BufferedReader br = null;
 	/* List of all reviews */
 	List<Review> reviews = new ArrayList<>();
@@ -22,7 +20,7 @@ public class DataReader {
 	    br = new BufferedReader(new FileReader(filename));
 	    String line;
 	    while ((line = br.readLine()) != null) {
-		reviews.add(new Review(line, noise));
+		reviews.add(new Review(line));
 	    }
 	} catch (Exception e) {
 	    e.printStackTrace();

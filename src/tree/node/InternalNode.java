@@ -7,10 +7,6 @@ public class InternalNode extends Node {
 
     private List<Node> children;
 
-    public List<Node> getChildren() {
-	return children;
-    }
-
     public InternalNode() {
 	super();
 	this.children = new ArrayList<>();
@@ -18,6 +14,10 @@ public class InternalNode extends Node {
 
     public void addChild(Node pChild) {
 	this.children.add(pChild);
+    }
+
+    public List<Node> getChildren() {
+	return children;
     }
 
     @Override
