@@ -12,22 +12,22 @@ public class DataReader {
     /**
      * Reads given quantity of reviews from the given file.
      */
-    public static List<Review> obtainReviews(String filename, int reviewCount) {
+    public static List<Review> obtainReviews(final String filename, final int reviewCount) {
 	BufferedReader br = null;
 	/* List of all reviews */
-	List<Review> reviews = new ArrayList<>();
+	final List<Review> reviews = new ArrayList<>();
 	try {
 	    br = new BufferedReader(new FileReader(filename));
 	    String line;
 	    while ((line = br.readLine()) != null) {
 		reviews.add(new Review(line));
 	    }
-	} catch (Exception e) {
+	} catch (final Exception e) {
 	    e.printStackTrace();
 	} finally {
 	    try {
 		br.close();
-	    } catch (IOException e) {
+	    } catch (final IOException e) {
 		e.printStackTrace();
 	    }
 	}
@@ -39,13 +39,13 @@ public class DataReader {
 	int positiveCount = 0;
 	int negativeCount = 0;
 	Collections.shuffle(reviews);
-	List<Review> selected = new ArrayList<>();
-	for (int i = 0; i < reviewCount; i++) {
-	    Review curr = reviews.get(i);
-	    if (curr.isPositiveLabel() && positiveCount < reviewCount / 2) {
+	final List<Review> selected = new ArrayList<>();
+	for (int i = 0; selected.size() < reviewCount; i++) {
+	    final Review curr = reviews.get(i);
+	    if (curr.getLabel() && (positiveCount < (reviewCount / 2))) {
 		positiveCount++;
 		selected.add(curr);
-	    } else if (!curr.isPositiveLabel() && negativeCount < reviewCount / 2) {
+	    } else if (!curr.getLabel() && (negativeCount < (reviewCount / 2))) {
 		negativeCount++;
 		selected.add(curr);
 	    }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -14,6 +15,7 @@ import data.Review;
 import tree.node.InternalNode;
 import tree.node.LeafNode;
 import tree.node.Node;
+import tree.rule.Rule;
 
 public class DecisionTree {
 
@@ -31,64 +33,85 @@ public class DecisionTree {
     private static final int MAX_TREES_IN_FORESTS = 50;
     private static final int FOREST_STEP_SIZE = 5;
 
-    private static int getCorrect(List<DecisionTree> forest, List<Review> reviews) {
+    private static double getAccuracy(final LinkedList<Rule> sortedRules, final List<Review> reviews) {
 	int correct = 0;
-	for (Review r : reviews) {
+	for (final Review review : reviews) {
+	    for (final Rule rule : sortedRules) {
+		if (rule.satisfiedBy(review)) {
+		    if (rule.getLabel() == review.getLabel()) {
+			correct++;
+		    }
+		    break;
+		}
+	    }
+	}
+	return (100.0 * correct) / (reviews.size());
+    }
+
+    private static int getCorrect(final List<DecisionTree> forest, final List<Review> reviews) {
+	int correct = 0;
+	for (final Review r : reviews) {
 	    int positiveVote = 0;
 	    int negativeVote = 0;
-	    for (DecisionTree tree : forest) {
+	    for (final DecisionTree tree : forest) {
 		if (tree.getLabelUsingTree(r)) {
 		    positiveVote++;
 		} else {
 		    negativeVote++;
 		}
 	    }
-	    boolean majorityVote = positiveVote > negativeVote;
-	    if (majorityVote == r.isPositiveLabel()) {
+	    final boolean majorityVote = positiveVote > negativeVote;
+	    if (majorityVote == r.getLabel()) {
 		correct++;
 	    }
 	}
 	return correct;
     }
 
-    // TODO Q.4 Pruning, post-pruning
-    // TODO Q.4 Change in prediction accuracy as a function of pruning
-    // TODO Q.5 feature bagging
-    // TODO Q.5 effect of number of trees in the forest on prediction accuracy
     /**
-     * arguments : filename experiment-number
+     * @param args
+     *            Exactly two arguments, i.e. filename and experiment-number
      */
-    public static void main(String[] args) {
+    public static void main(final String[] args) {
 	if (args.length != 2) {
 	    System.err.println("Two arguments expected, recieved " + args.length);
 	} else {
-	    String testFileName = args[0];
-	    int exptNo = Integer.parseInt(args[1]);
-	    if (exptNo < 2 || exptNo > 5) {
+	    final String testFileName = args[0];
+	    final int exptNo = Integer.parseInt(args[1]);
+	    if ((exptNo < 2) || (exptNo > 5)) {
 		System.err.println("Experiment Number should be 2-5, recieved " + exptNo);
 	    } else {
-		System.out.println("Processing Training Data");
-		List<Review> trainReviews = DataReader.obtainReviews(TRAINING_FILENAME, TOTAL_REVIEWS);
+		System.out.println("Processing Training/Validation Data");
+
+		final List<Review> trainingAndValidationReviews = DataReader.obtainReviews(TRAINING_FILENAME,
+			TOTAL_REVIEWS * 2);
+
+		final List<Review> trainReviews = new ArrayList<>();
+		final List<Review> validateReviews = new ArrayList<>();
+
+		for (int i = 0; i < TOTAL_REVIEWS; i++) {
+		    trainReviews.add(trainingAndValidationReviews.get(i));
+		}
+
+		for (int i = TOTAL_REVIEWS; i < (2 * TOTAL_REVIEWS); i++) {
+		    validateReviews.add(trainingAndValidationReviews.get(i));
+		}
 
 		System.out.println("Processing Testing Data");
-		List<Review> testReviews = DataReader.obtainReviews(testFileName, TOTAL_REVIEWS);
+		final List<Review> testReviews = DataReader.obtainReviews(testFileName, TOTAL_REVIEWS);
 
 		System.out.println("Processing Training Attributes");
-		Set<Integer> trainAttributes = new HashSet<>();
+		final Set<Integer> trainAttributes = new HashSet<>();
 
 		trainReviews.stream().map(Review::getAttributes).forEach(trainAttributes::addAll);
 
 		switch (exptNo) {
-		/*
-		 * Decision Tree arguments: reviews attributes earlyStopping
-		 * attributePrinting
-		 */
 		case 2:
-		    for (int height : MAX_HEIGHTS) {
+		    for (final int height : MAX_HEIGHTS) {
 			MAX_HEIGHT = height;
 			System.out.println("Current Maximum Height is " + height);
 			System.out.println("Building Tree");
-			DecisionTree tree = new DecisionTree(trainReviews, trainAttributes, true, true);
+			final DecisionTree tree = new DecisionTree(trainReviews, trainAttributes, true, true);
 
 			System.out.print("Training Data: ");
 			tree.testReviews(trainReviews);
@@ -98,19 +121,19 @@ public class DecisionTree {
 		    }
 		    break;
 		case 3:
-		    Random rand = new Random();
+		    final Random rand = new Random();
 		    rand.setSeed(System.currentTimeMillis());
-		    for (double noiseThreshold : NOISE_THRESHOLDS) {
-			for (Review r : trainReviews) {
+		    for (final double noiseThreshold : NOISE_THRESHOLDS) {
+			for (final Review r : trainReviews) {
 			    r.resetLabel();
-			    if (rand.nextDouble() * 100 < noiseThreshold) {
+			    if ((rand.nextDouble() * 100) < noiseThreshold) {
 				r.switchLabel();
 			    }
 			}
 
 			System.out.println("Current Noise Threshold is " + noiseThreshold);
 			System.out.println("Building Tree");
-			DecisionTree tree = new DecisionTree(trainReviews, trainAttributes, false, false);
+			final DecisionTree tree = new DecisionTree(trainReviews, trainAttributes, false, false);
 
 			System.out.print("Training Data: ");
 			tree.testReviews(trainReviews);
@@ -120,30 +143,73 @@ public class DecisionTree {
 		    }
 		    break;
 		case 4:
-		    // TODO pruning
+
+		    System.out.println("Building Tree");
+		    final DecisionTree tree = new DecisionTree(trainReviews, trainAttributes, false, false);
+
+		    int rulesPruned = 0;
+
+		    System.out.println("Generating Rules");
+		    final List<Rule> rules = tree.getRules();
+
+		    final LinkedList<Rule> sortedRules = new LinkedList<>();
+		    for (final Rule rule : rules) {
+			sortedRules.add(rule);
+		    }
+
+		    System.out.println("Accuracy using tree: " + tree.getAccuracy(testReviews));
+		    System.out.println("Accuracy using unsorted rules: " + getAccuracy(sortedRules, testReviews));
+		    Collections.sort(sortedRules, (r1, r2) -> Double.compare(r2.getEstimatedAccuracy(validateReviews),
+			    r1.getEstimatedAccuracy(validateReviews)));
+		    System.out.println("Accuracy using sorted rules: " + getAccuracy(sortedRules, testReviews));
+		    System.out.println("Pruning Rules on Validation Data");
+
+		    System.out.println("+------------+----------------+");
+		    System.out.println("|Rules Pruned|Testing Accuracy|");
+		    System.out.println("+------------+----------------+");
+
+		    for (final Rule rule : rules) {
+			rule.prune(validateReviews);
+			Collections.sort(sortedRules,
+				(r1, r2) -> Double.compare(r2.getEstimatedAccuracy(validateReviews),
+					r1.getEstimatedAccuracy(validateReviews)));
+			rulesPruned++;
+			System.out.printf("|%12d|%16.2f|\n", rulesPruned, getAccuracy(sortedRules, testReviews));
+		    }
+		    System.out.println("+------------+----------------+");
 		    break;
 		case 5:
-		    List<DecisionTree> forest = new ArrayList<>();
-		    List<Integer> trainAttributesList = new ArrayList<>(trainAttributes);
+		    final List<DecisionTree> forest = new ArrayList<>();
+		    final List<Integer> trainAttributesList = new ArrayList<>(trainAttributes);
+
 		    final int subsetAttributeSize = (int) Math.round(Math.sqrt(trainAttributesList.size()));
+
 		    System.out.println("+-----------+--------------------+--------------------+");
 		    System.out.printf("|%11s|%20s|%20s|\n", "Total Trees", "Training Accuracy", "Testing Accuracy");
 		    System.out.println("+-----------+--------------------+--------------------+");
-		    for (int i = 0; i < MAX_TREES_IN_FORESTS / FOREST_STEP_SIZE; i++) {
+
+		    for (int i = 0; i < (MAX_TREES_IN_FORESTS / FOREST_STEP_SIZE); i++) {
 			for (int k = 0; k < FOREST_STEP_SIZE; k++) {
 			    Collections.shuffle(trainAttributesList);
-			    Set<Integer> attributeSubset = new HashSet<>();
+
+			    final Set<Integer> attributeSubset = new HashSet<>();
+
 			    for (int j = 0; j < subsetAttributeSize; j++) {
 				attributeSubset.add(trainAttributesList.get(j));
 			    }
+
 			    forest.add(new DecisionTree(trainReviews, attributeSubset, false, false));
 			}
-			int trainCorrect = getCorrect(forest, trainReviews);
-			int testCorrect = getCorrect(forest, testReviews);
-			double trainingAccuracy = 100.0 * trainCorrect / ((double) trainReviews.size());
-			double testingAccuracy = 100.0 * testCorrect / ((double) testReviews.size());
+
+			final int trainCorrect = getCorrect(forest, trainReviews);
+			final int testCorrect = getCorrect(forest, testReviews);
+
+			final double trainingAccuracy = (100.0 * trainCorrect) / (trainReviews.size());
+			final double testingAccuracy = (100.0 * testCorrect) / (testReviews.size());
+
 			System.out.printf("|%11d|%20f|%20f|\n", forest.size(), trainingAccuracy, testingAccuracy);
 		    }
+
 		    System.out.println("+-----------+--------------------+--------------------+");
 		    break;
 		}
@@ -151,14 +217,24 @@ public class DecisionTree {
 	}
     }
 
-    private Node root;
+    private final Node root;
 
-    public DecisionTree(List<Review> reviews, Set<Integer> attributes, boolean earlyStopping,
-	    boolean attributePrinting) {
-	Map<Integer, Integer> attributeCount = new HashMap<>();
+    /**
+     * @param reviews
+     *            The set of reviews to build the tree upon
+     * @param attributes
+     *            The attributes to use to build the tree
+     * @param earlyStopping
+     *            Whether to stop building the tree after some threshold
+     * @param attributePrinting
+     *            Whether to print the Attribute Usage Statistics
+     */
+    public DecisionTree(final List<Review> reviews, final Set<Integer> attributes, final boolean earlyStopping,
+	    final boolean attributePrinting) {
+	final Map<Integer, Integer> attributeCount = new HashMap<>();
 	LeafNode.resetLeafNodeCount();
 
-	this.root = iterativeDichotomiser3(reviews, attributes, earlyStopping, attributeCount, 0);
+	this.root = this.iterativeDichotomiser3(reviews, attributes, earlyStopping, attributeCount, 0);
 
 	if (attributePrinting) {
 	    System.out.println("Top " + MAX_ATTRIBUTES_PRINT + " Attribute Counts");
@@ -175,55 +251,57 @@ public class DecisionTree {
 
     }
 
-    private double entropy(int pos, int neg) {
+    /**
+     * @param pos
+     *            positive labeled reviews
+     * @param neg
+     *            negative labeled reviews
+     */
+    private double entropy(final int pos, final int neg) {
 
-	double pp = pos / ((double) (pos + neg)); // p-plus
-	double pm = 1 - pp; // p-minus
+	final double pp = pos / ((double) (pos + neg)); // p-plus
+	final double pm = 1 - pp; // p-minus
 
 	double entropy = 0;
 
-	if (pp != 0)
-	    entropy -= pp * Math.log(pp) / Math.log(2);
-	if (pm != 0)
-	    entropy -= pm * Math.log(pm) / Math.log(2);
+	if (pp != 0) {
+	    entropy -= (pp * Math.log(pp)) / Math.log(2);
+	}
+	if (pm != 0) {
+	    entropy -= (pm * Math.log(pm)) / Math.log(2);
+	}
 	return entropy;
     }
 
-    private boolean getLabelUsingTree(Review review) {
-	return getLabelUsingTree(review, root);
-    }
-
-    private boolean getLabelUsingTree(Review review, Node node) {
-	if (node instanceof InternalNode) {
-	    InternalNode inode = (InternalNode) node;
-	    int val = review.getValue(node.getWordID());
-	    /*
-	     * The ranges are sorted hence we can sweep from and left and
-	     * recurse on appropriate node
-	     */
-	    for (Node child : inode.getChildren()) {
-		if (child.getMinVal() <= val && val < child.getMaxVal()) {
-		    return getLabelUsingTree(review, child);
-		}
+    private double getAccuracy(final List<Review> reviews) {
+	int correct = 0;
+	for (final Review review : reviews) {
+	    if (this.getLabelUsingTree(review) == review.getLabel()) {
+		correct++;
 	    }
-	    throw new RuntimeException("No Child Matched!");
-	} else {
-	    /* Reached a terminal node, return the label of this node */
-	    return ((LeafNode) node).getLabel();
 	}
+	return (100.0 * correct) / (reviews.size());
     }
 
-    private Node iterativeDichotomiser3(List<Review> reviews, Set<Integer> attributes, boolean earlyStopping,
-	    Map<Integer, Integer> attributeCount, int height) {
+    private boolean getLabelUsingTree(final Review review) {
+	return this.root.getLabel(review);
+    }
+
+    private List<Rule> getRules() {
+	return this.root.getRules();
+    }
+
+    private Node iterativeDichotomiser3(final List<Review> reviews, final Set<Integer> attributes,
+	    final boolean earlyStopping, final Map<Integer, Integer> attributeCount, final int height) {
 	/*
 	 * Check if all labels are same or not, where return a single leaf node
 	 * in case of the former
 	 */
-	boolean firstLabel = reviews.get(0).isPositiveLabel();
+	final boolean firstLabel = reviews.get(0).getLabel();
 	boolean allSame = true;
 
 	for (int i = 1; i < reviews.size(); i++) {
-	    boolean currLabel = reviews.get(i).isPositiveLabel();
+	    final boolean currLabel = reviews.get(i).getLabel();
 	    if (currLabel != firstLabel) {
 		allSame = false;
 		break;
@@ -233,16 +311,16 @@ public class DecisionTree {
 	    return new LeafNode(firstLabel);
 	}
 
-	int totalSize = reviews.size();
+	final int totalSize = reviews.size();
 
-	int totalPositive = (int) reviews.stream().filter(Review::isPositiveLabel).count();
-	int totalNegative = totalSize - totalPositive;
+	final int totalPositive = (int) reviews.stream().filter(Review::getLabel).count();
+	final int totalNegative = totalSize - totalPositive;
 
-	if (earlyStopping && height >= MAX_HEIGHT) {
+	if (earlyStopping && (height >= MAX_HEIGHT)) {
 	    return new LeafNode(totalPositive > totalNegative);
 	}
 
-	InternalNode root = new InternalNode();
+	final InternalNode root = new InternalNode();
 	/* Finding the best attribute */
 
 	int bestAttribute = -1;
@@ -250,17 +328,17 @@ public class DecisionTree {
 	double maxInformationGain = 0;
 	double maxSplitPosition = 0;
 
-	double totalEntropy = entropy(totalPositive, totalNegative);
+	final double totalEntropy = this.entropy(totalPositive, totalNegative);
 
-	for (int attribute : attributes) {
+	for (final int attribute : attributes) {
 
 	    Collections.sort(reviews, (r1, r2) -> Integer.compare(r1.getValue(attribute), r2.getValue(attribute)));
 
 	    int positive = 0;
 	    int negative = 0;
 
-	    for (int i = 0; i < totalSize - 1; i++) {
-		if (reviews.get(i).isPositiveLabel()) {
+	    for (int i = 0; i < (totalSize - 1); i++) {
+		if (reviews.get(i).getLabel()) {
 		    positive++;
 		} else {
 		    negative++;
@@ -269,20 +347,19 @@ public class DecisionTree {
 		 * If we can split between this element and the next element we
 		 * calculate information gain of this binary split
 		 */
-		int currVal = reviews.get(i).getValue(attribute);
-		int nextVal = reviews.get(i + 1).getValue(attribute);
+		final int currVal = reviews.get(i).getValue(attribute);
+		final int nextVal = reviews.get(i + 1).getValue(attribute);
 
-		// X or (X and Y)
 		if (nextVal != currVal) {
 
-		    int remainingPositive = totalPositive - positive;
-		    int remainingNegative = totalNegative - negative;
+		    final int remainingPositive = totalPositive - positive;
+		    final int remainingNegative = totalNegative - negative;
 
-		    int size1 = positive + negative;
-		    int size2 = remainingPositive + remainingNegative;
+		    final int size1 = positive + negative;
+		    final int size2 = remainingPositive + remainingNegative;
 
-		    double informationGain = totalEntropy - (size1 * entropy(positive, negative)
-			    + size2 * entropy(remainingPositive, remainingNegative)) / totalSize;
+		    final double informationGain = totalEntropy - (((size1 * this.entropy(positive, negative))
+			    + (size2 * this.entropy(remainingPositive, remainingNegative))) / totalSize);
 
 		    if (informationGain > maxInformationGain) {
 			bestAttribute = attribute;
@@ -309,8 +386,8 @@ public class DecisionTree {
 	    }
 	    attributeCount.put(bestAttribute, attributeCount.get(bestAttribute) + 1);
 
-	    List<Review> class1 = new ArrayList<>();
-	    List<Review> class2 = new ArrayList<>();
+	    final List<Review> class1 = new ArrayList<>();
+	    final List<Review> class2 = new ArrayList<>();
 
 	    for (int i = 0; i < totalSize; i++) {
 		if (reviews.get(i).getValue(bestAttribute) < maxSplitPosition) {
@@ -320,12 +397,16 @@ public class DecisionTree {
 		}
 	    }
 
-	    Node child1 = iterativeDichotomiser3(class1, attributes, earlyStopping, attributeCount, height + 1);
-	    Node child2 = iterativeDichotomiser3(class2, attributes, earlyStopping, attributeCount, height + 1);
+	    final Node child1 = this.iterativeDichotomiser3(class1, attributes, earlyStopping, attributeCount,
+		    height + 1);
+	    final Node child2 = this.iterativeDichotomiser3(class2, attributes, earlyStopping, attributeCount,
+		    height + 1);
 
+	    child1.setParentWordID(bestAttribute);
 	    child1.setMinVal(Double.NEGATIVE_INFINITY);
 	    child1.setMaxVal(maxSplitPosition);
 
+	    child2.setParentWordID(bestAttribute);
 	    child2.setMinVal(maxSplitPosition);
 	    child2.setMaxVal(Double.POSITIVE_INFINITY);
 
@@ -335,19 +416,13 @@ public class DecisionTree {
 	return root;
     }
 
-    private void testReviews(List<Review> reviews) {
-	int correct = 0;
-	for (Review review : reviews) {
-	    if (getLabelUsingTree(review) == review.isPositiveLabel()) {
-		correct++;
-	    }
-	}
-	System.out.println("Accuracy is " + (100.0 * correct / ((double) reviews.size())) + "%");
+    private void testReviews(final List<Review> reviews) {
+	System.out.println("Accuracy is " + this.getAccuracy(reviews) + "%");
     }
 
     @Override
     public String toString() {
-	return root.toString("", true, true);
+	return this.root.toString("", true, true);
     }
 
 }

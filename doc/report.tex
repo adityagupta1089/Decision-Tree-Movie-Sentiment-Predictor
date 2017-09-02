@@ -116,7 +116,143 @@ data [set=testacc] {
 \end{tikzpicture}
 
 \section*{Pruning (Experiment 4)}
-Lorem Ipsum bla bla bla
+Each rule was pruned by removing antedecents greedily increasing the rule's accuracy and finally the sorted rules were used to calculate the accuracy of the rules.
+
+\begin{tikzpicture}[scale=1.5]
+\datavisualization [scientific axes=clean,
+	visualize as smooth line/.list={leaf},
+	style sheet=vary hue,
+	style sheet=cross marks,
+	x axis={grid, label={Rules Pruned}},
+	y axis={grid, label={Testing Accuracy}},
+	leaf={label in legend={text=Testing Accuracy}}]
+data [set=leaf]{
+x, y
+0, 62.40
+1, 62.70
+2, 62.70
+3, 62.80
+4, 62.80
+5, 63.00
+6, 63.00
+7, 63.00
+8, 63.00
+9, 63.10
+10, 63.00
+11, 63.00
+12, 63.20
+13, 63.10
+14, 63.10
+15, 63.10
+16, 63.00
+17, 62.80
+18, 62.70
+19, 63.90
+20, 64.10
+21, 64.10
+22, 64.70
+23, 64.70
+24, 65.90
+25, 65.70
+26, 65.70
+27, 65.90
+28, 65.90
+29, 65.90
+30, 66.80
+31, 66.40
+32, 67.00
+33, 67.00
+34, 67.00
+35, 66.90
+36, 67.10
+37, 67.10
+38, 67.10
+39, 66.90
+40, 66.80
+41, 66.90
+42, 67.00
+43, 66.80
+44, 66.80
+45, 66.80
+46, 66.90
+47, 67.20
+48, 67.20
+49, 67.20
+50, 67.20
+51, 67.20
+52, 67.50
+53, 67.50
+54, 67.50
+55, 67.50
+56, 67.60
+57, 67.70
+58, 67.70
+59, 67.50
+60, 67.60
+61, 67.50
+62, 67.40
+63, 67.30
+64, 67.30
+65, 67.30
+66, 67.30
+67, 67.30
+68, 67.30
+69, 67.30
+70, 67.30
+71, 67.30
+72, 67.30
+73, 67.30
+74, 67.40
+75, 67.70
+76, 67.70
+77, 67.60
+78, 67.60
+79, 67.60
+80, 67.70
+81, 67.60
+82, 67.60
+83, 67.60
+84, 67.50
+85, 67.60
+86, 67.40
+87, 67.40
+88, 67.40
+89, 67.30
+90, 67.30
+91, 67.30
+92, 67.30
+93, 67.10
+94, 67.10
+95, 67.10
+96, 67.10
+97, 67.10
+98, 67.10
+99, 67.20
+100, 67.30
+101, 67.20
+102, 67.50
+103, 67.50
+104, 67.90
+105, 67.90
+106, 67.90
+107, 67.90
+108, 67.90
+109, 67.90
+110, 68.00
+111, 68.00
+112, 68.00
+113, 68.00
+114, 68.00
+115, 68.00
+116, 68.00
+117, 68.00
+118, 68.00
+119, 68.00
+120, 68.00
+121, 68.60
+122, 68.60
+};
+\end{tikzpicture}
 
 \section*{Decision Forests (Experiment 5)}
 A decision forest was constructed using $5, 10, ... 50$ trees  with $\sqrt{N}$ where $N$ are the attributes occuring in the $1000$ trees and the following results were obtained:
